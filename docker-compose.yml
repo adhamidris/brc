@@ -1,0 +1,60 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: brc-wp-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: brc_wordpress
+      MYSQL_USER: brc
+      MYSQL_PASSWORD: brc
+      MYSQL_ROOT_PASSWORD: brc_root
+    volumes:
+      - brc_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ubrc", "-pbrc"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  wordpress:
+    image: wordpress:php8.2-apache
+    container_name: brc-wp-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: brc_wordpress
+      WORDPRESS_DB_USER: brc
+      WORDPRESS_DB_PASSWORD: brc
+      WORDPRESS_DEBUG: "1"
+      WORDPRESS_CONFIG_EXTRA: |
+        define( 'WP_DEBUG_LOG', true );
+        define( 'WP_DEBUG_DISPLAY', true );
+        define( 'SCRIPT_DEBUG', true );
+    volumes:
+      - brc_wp_data:/var/www/html
+      - ./brc-theme:/var/www/html/wp-content/themes/brc-theme
+      - ./brc-core:/var/www/html/wp-content/plugins/brc-core
+      - ./scripts:/var/www/html/scripts
+
+  phpmyadmin:
+    image: phpmyadmin:5-apache
+    container_name: brc-wp-phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: brc
+      PMA_PASSWORD: brc
+
+volumes:
+  brc_db_data:
+  brc_wp_data:

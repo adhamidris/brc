@@ -1,0 +1,19 @@
+body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	color: #101312;
+}
+
+.brc-hero {
+	padding: 80px 32px;
+	background: #101312;
+	color: #ffffff;
+}
+
+.brc-kicker,
+.brc-section__eyebrow {
+	color: #b58a5c;
+	font-size: 0.78rem;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
