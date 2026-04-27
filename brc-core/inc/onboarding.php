@@ -19,10 +19,127 @@ function brc_core_is_brc_theme_active(): bool {
 }
 
 /**
+ * Acquire a short-lived onboarding lock to avoid concurrent setup writes.
+ */
+function brc_core_acquire_onboarding_lock(): bool {
+	$lock_key       = 'brc_core_onboarding_lock';
+	$lock_timestamp = (int) get_option( $lock_key, 0 );
+
+	if ( $lock_timestamp && ( time() - $lock_timestamp ) < 300 ) {
+		return false;
+	}
+
+	if ( $lock_timestamp ) {
+		delete_option( $lock_key );
+	}
+
+	return add_option( $lock_key, (string) time(), '', false );
+}
+
+/**
+ * Release the onboarding lock.
+ */
+function brc_core_release_onboarding_lock(): void {
+	delete_option( 'brc_core_onboarding_lock' );
+}
+
+/**
+ * Find all managed page IDs that currently claim a given slug.
+ *
+ * @return array<int>
+ */
+function brc_core_get_page_ids_by_slug( string $slug ): array {
+	global $wpdb;
+
+	$page_ids = $wpdb->get_col(
+		$wpdb->prepare(
+			"SELECT ID
+			FROM {$wpdb->posts}
+			WHERE post_type = 'page'
+				AND post_name = %s
+				AND post_status NOT IN ('trash', 'auto-draft', 'inherit')
+			ORDER BY ID ASC",
+			$slug
+		)
+	);
+
+	return array_values(
+		array_filter(
+			array_map( 'intval', $page_ids ),
+			static fn ( int $page_id ): bool => $page_id > 0
+		)
+	);
+}
+
+/**
+ * Pick the canonical page to keep for a managed slug.
+ */
+function brc_core_get_canonical_page_id( string $slug, array $page_ids ): int {
+	$page_ids = array_values(
+		array_filter(
+			array_map( 'intval', $page_ids ),
+			static fn ( int $page_id ): bool => $page_id > 0
+		)
+	);
+
+	if ( empty( $page_ids ) ) {
+		return 0;
+	}
+
+	if ( 'home' === $slug ) {
+		$front_page_id = (int) get_option( 'page_on_front' );
+
+		if ( in_array( $front_page_id, $page_ids, true ) ) {
+			return $front_page_id;
+		}
+	}
+
+	if ( 'blog' === $slug ) {
+		$posts_page_id = (int) get_option( 'page_for_posts' );
+
+		if ( in_array( $posts_page_id, $page_ids, true ) ) {
+			return $posts_page_id;
+		}
+	}
+
+	return (int) $page_ids[0];
+}
+
+/**
+ * Trash duplicate managed pages once a canonical page has been selected.
+ */
+function brc_core_cleanup_duplicate_pages( string $slug, int $keep_id ): void {
+	$page_ids = brc_core_get_page_ids_by_slug( $slug );
+
+	foreach ( $page_ids as $page_id ) {
+		if ( $page_id === $keep_id ) {
+			continue;
+		}
+
+		wp_trash_post( $page_id );
+	}
+}
+
+/**
+ * Find the untouched default Sample Page post.
+ */
+function brc_core_get_default_sample_page_id(): int {
+	$sample_page = get_page_by_path( 'sample-page', OBJECT, 'page' );
+
+	if ( ! $sample_page || 'Sample Page' !== $sample_page->post_title ) {
+		return 0;
+	}
+
+	return (int) $sample_page->ID;
+}
+
+/**
  * Ensure a page exists and optionally hydrate default content.
  */
 function brc_core_ensure_page( string $slug, string $title, string $content = '' ): int {
-	$existing = get_page_by_path( $slug, OBJECT, 'page' );
+	$page_ids = brc_core_get_page_ids_by_slug( $slug );
+	$keep_id  = brc_core_get_canonical_page_id( $slug, $page_ids );
+	$existing = $keep_id ? get_post( $keep_id ) : null;
 
 	$args = array(
 		'post_type'   => 'page',
@@ -47,6 +164,8 @@ function brc_core_ensure_page( string $slug, string $title, string $content = ''
 		return 0;
 	}
 
+	brc_core_cleanup_duplicate_pages( $slug, (int) $page_id );
+
 	return (int) $page_id;
 }
 
@@ -57,6 +176,27 @@ function brc_core_is_default_hello_world_post( WP_Post $post ): bool {
 	return 'post' === $post->post_type
 		&& 'publish' === $post->post_status
 		&& 'hello-world' === $post->post_name;
+}
+
+/**
+ * Remove the untouched default Hello World post when present.
+ */
+function brc_core_cleanup_default_hello_world_post(): void {
+	$default_posts = get_posts(
+		array(
+			'post_type'      => 'post',
+			'post_status'    => 'publish',
+			'posts_per_page' => 3,
+			'orderby'        => 'date',
+			'order'          => 'DESC',
+		)
+	);
+
+	foreach ( $default_posts as $default_post ) {
+		if ( brc_core_is_default_hello_world_post( $default_post ) ) {
+			wp_trash_post( $default_post->ID );
+		}
+	}
 }
 
 /**
@@ -236,6 +376,13 @@ function brc_core_seed_starter_content(): void {
 	brc_core_seed_starter_posts();
 	brc_core_seed_starter_locations();
 	brc_core_seed_starter_projects();
+	brc_core_cleanup_default_hello_world_post();
+
+	$sample_page_id = brc_core_get_default_sample_page_id();
+
+	if ( $sample_page_id ) {
+		wp_trash_post( $sample_page_id );
+	}
 }
 
 /**
@@ -259,32 +406,43 @@ function brc_core_ensure_primary_menu( int $home_id, int $blog_id, int $about_id
 
 	$menu_items = array(
 		array(
-			'title' => __( 'Home', 'brc-core' ),
-			'url'   => $home_id ? get_permalink( $home_id ) : home_url( '/' ),
+			'title'     => __( 'Home', 'brc-core' ),
+			'kind'      => $home_id ? 'page' : 'custom',
+			'object_id' => $home_id,
+			'url'       => home_url( '/' ),
 		),
 		array(
 			'title' => __( 'Projects', 'brc-core' ),
+			'kind'  => 'custom',
 			'url'   => get_post_type_archive_link( 'brc_project' ) ?: '#',
 		),
 		array(
 			'title' => __( 'Locations', 'brc-core' ),
+			'kind'  => 'custom',
 			'url'   => get_post_type_archive_link( 'brc_location' ) ?: '#',
 		),
 		array(
 			'title' => __( 'Units', 'brc-core' ),
+			'kind'  => 'custom',
 			'url'   => get_post_type_archive_link( 'brc_unit' ) ?: '#',
 		),
 		array(
-			'title' => __( 'Blog', 'brc-core' ),
-			'url'   => $blog_id ? get_permalink( $blog_id ) : '#',
+			'title'     => __( 'Blog', 'brc-core' ),
+			'kind'      => $blog_id ? 'page' : 'custom',
+			'object_id' => $blog_id,
+			'url'       => $blog_id ? get_permalink( $blog_id ) : '#',
 		),
 		array(
-			'title' => __( 'About', 'brc-core' ),
-			'url'   => $about_id ? get_permalink( $about_id ) : '#',
+			'title'     => __( 'About', 'brc-core' ),
+			'kind'      => $about_id ? 'page' : 'custom',
+			'object_id' => $about_id,
+			'url'       => $about_id ? get_permalink( $about_id ) : '#',
 		),
 		array(
-			'title' => __( 'Contact', 'brc-core' ),
-			'url'   => $contact_id ? get_permalink( $contact_id ) : '#',
+			'title'     => __( 'Contact', 'brc-core' ),
+			'kind'      => $contact_id ? 'page' : 'custom',
+			'object_id' => $contact_id,
+			'url'       => $contact_id ? get_permalink( $contact_id ) : '#',
 		),
 	);
 
@@ -293,21 +451,41 @@ function brc_core_ensure_primary_menu( int $home_id, int $blog_id, int $about_id
 
 	if ( $existing_items ) {
 		foreach ( $existing_items as $existing_item ) {
-			$existing_map[ $existing_item->title ] = (int) $existing_item->ID;
+			$key = sanitize_title( $existing_item->title );
+
+			if ( ! isset( $existing_map[ $key ] ) ) {
+				$existing_map[ $key ] = array();
+			}
+
+			$existing_map[ $key ][] = $existing_item;
 		}
 	}
 
 	foreach ( $menu_items as $menu_item ) {
-		wp_update_nav_menu_item(
-			$menu_id,
-			$existing_map[ $menu_item['title'] ] ?? 0,
-			array(
-				'menu-item-title'  => $menu_item['title'],
-				'menu-item-url'    => $menu_item['url'],
-				'menu-item-status' => 'publish',
-				'menu-item-type'   => 'custom',
-			)
+		$key             = sanitize_title( $menu_item['title'] );
+		$item_bucket     = $existing_map[ $key ] ?? array();
+		$canonical_item  = array_shift( $item_bucket );
+		$menu_item_id    = $canonical_item ? (int) $canonical_item->ID : 0;
+		$menu_item_args  = array(
+			'menu-item-title'  => $menu_item['title'],
+			'menu-item-status' => 'publish',
 		);
+
+		if ( 'page' === $menu_item['kind'] && ! empty( $menu_item['object_id'] ) ) {
+			$menu_item_args['menu-item-type']      = 'post_type';
+			$menu_item_args['menu-item-object']    = 'page';
+			$menu_item_args['menu-item-object-id'] = (int) $menu_item['object_id'];
+		} else {
+			$menu_item_args['menu-item-type'] = 'custom';
+			$menu_item_args['menu-item-url']  = $menu_item['url'];
+		}
+
+		$updated_item_id = wp_update_nav_menu_item( $menu_id, $menu_item_id, $menu_item_args );
+		$keep_item_id    = is_wp_error( $updated_item_id ) ? $menu_item_id : (int) $updated_item_id;
+
+		foreach ( $item_bucket as $duplicate_item ) {
+			wp_delete_post( (int) $duplicate_item->ID, true );
+		}
 	}
 
 	$locations            = get_theme_mod( 'nav_menu_locations' );
@@ -325,10 +503,14 @@ function brc_core_onboarding_needs_repair(): bool {
 		return false;
 	}
 
-	$home_page    = get_page_by_path( 'home', OBJECT, 'page' );
-	$blog_page    = get_page_by_path( 'blog', OBJECT, 'page' );
-	$about_page   = get_page_by_path( 'about', OBJECT, 'page' );
-	$contact_page = get_page_by_path( 'contact', OBJECT, 'page' );
+	$home_ids     = brc_core_get_page_ids_by_slug( 'home' );
+	$blog_ids     = brc_core_get_page_ids_by_slug( 'blog' );
+	$about_ids    = brc_core_get_page_ids_by_slug( 'about' );
+	$contact_ids  = brc_core_get_page_ids_by_slug( 'contact' );
+	$home_page    = ( 1 === count( $home_ids ) ) ? get_post( $home_ids[0] ) : null;
+	$blog_page    = ( 1 === count( $blog_ids ) ) ? get_post( $blog_ids[0] ) : null;
+	$about_page   = ( 1 === count( $about_ids ) ) ? get_post( $about_ids[0] ) : null;
+	$contact_page = ( 1 === count( $contact_ids ) ) ? get_post( $contact_ids[0] ) : null;
 	$locations    = get_theme_mod( 'nav_menu_locations' );
 	$locations    = is_array( $locations ) ? $locations : array();
 
@@ -346,6 +528,36 @@ function brc_core_onboarding_needs_repair(): bool {
 
 	if ( empty( $locations['primary'] ) ) {
 		return true;
+	}
+
+	$menu_items     = wp_get_nav_menu_items( (int) $locations['primary'] );
+	$managed_titles = array(
+		sanitize_title( __( 'Home', 'brc-core' ) ),
+		sanitize_title( __( 'Projects', 'brc-core' ) ),
+		sanitize_title( __( 'Locations', 'brc-core' ) ),
+		sanitize_title( __( 'Units', 'brc-core' ) ),
+		sanitize_title( __( 'Blog', 'brc-core' ) ),
+		sanitize_title( __( 'About', 'brc-core' ) ),
+		sanitize_title( __( 'Contact', 'brc-core' ) ),
+	);
+	$menu_counts    = array_fill_keys( $managed_titles, 0 );
+
+	if ( empty( $menu_items ) ) {
+		return true;
+	}
+
+	foreach ( $menu_items as $menu_item ) {
+		$key = sanitize_title( $menu_item->title );
+
+		if ( isset( $menu_counts[ $key ] ) ) {
+			++$menu_counts[ $key ];
+		}
+	}
+
+	foreach ( $menu_counts as $count ) {
+		if ( 1 !== $count ) {
+			return true;
+		}
 	}
 
 	if ( BRC_CORE_VERSION !== get_option( 'brc_core_onboarding_version', '' ) ) {
@@ -367,27 +579,35 @@ function brc_core_run_onboarding( bool $force = false ): void {
 		return;
 	}
 
-	$home_id    = brc_core_ensure_page( 'home', __( 'Home', 'brc-core' ), brc_core_get_default_homepage_content() );
-	$blog_id    = brc_core_ensure_page( 'blog', __( 'Blog', 'brc-core' ) );
-	$about_id   = brc_core_ensure_page( 'about', __( 'About', 'brc-core' ), '<!-- wp:paragraph --><p>' . esc_html__( 'Replace this placeholder with BRC brand narrative, leadership, and development philosophy.', 'brc-core' ) . '</p><!-- /wp:paragraph -->' );
-	$contact_id = brc_core_ensure_page( 'contact', __( 'Contact', 'brc-core' ), '<!-- wp:paragraph --><p>' . esc_html__( 'Use this page for contact details, WhatsApp, office locations, and lead routing notes.', 'brc-core' ) . '</p><!-- /wp:paragraph -->' );
-
-	if ( $home_id ) {
-		update_option( 'show_on_front', 'page' );
-		update_option( 'page_on_front', $home_id );
+	if ( ! brc_core_acquire_onboarding_lock() ) {
+		return;
 	}
 
-	if ( $blog_id ) {
-		update_option( 'page_for_posts', $blog_id );
+	try {
+		$home_id    = brc_core_ensure_page( 'home', __( 'Home', 'brc-core' ), brc_core_get_default_homepage_content() );
+		$blog_id    = brc_core_ensure_page( 'blog', __( 'Blog', 'brc-core' ) );
+		$about_id   = brc_core_ensure_page( 'about', __( 'About', 'brc-core' ), '<!-- wp:paragraph --><p>' . esc_html__( 'Replace this placeholder with BRC brand narrative, leadership, and development philosophy.', 'brc-core' ) . '</p><!-- /wp:paragraph -->' );
+		$contact_id = brc_core_ensure_page( 'contact', __( 'Contact', 'brc-core' ), '<!-- wp:paragraph --><p>' . esc_html__( 'Use this page for contact details, WhatsApp, office locations, and lead routing notes.', 'brc-core' ) . '</p><!-- /wp:paragraph -->' );
+
+		if ( $home_id ) {
+			update_option( 'show_on_front', 'page' );
+			update_option( 'page_on_front', $home_id );
+		}
+
+		if ( $blog_id ) {
+			update_option( 'page_for_posts', $blog_id );
+		}
+
+		global $wp_rewrite;
+
+		$wp_rewrite->set_permalink_structure( '/%postname%/' );
+		brc_core_ensure_primary_menu( $home_id, $blog_id, $about_id, $contact_id );
+		brc_core_seed_starter_content();
+		flush_rewrite_rules( true );
+		update_option( 'brc_core_onboarding_version', BRC_CORE_VERSION );
+	} finally {
+		brc_core_release_onboarding_lock();
 	}
-
-	global $wp_rewrite;
-
-	$wp_rewrite->set_permalink_structure( '/%postname%/' );
-	brc_core_ensure_primary_menu( $home_id, $blog_id, $about_id, $contact_id );
-	brc_core_seed_starter_content();
-	flush_rewrite_rules( true );
-	update_option( 'brc_core_onboarding_version', BRC_CORE_VERSION );
 }
 
 /**
