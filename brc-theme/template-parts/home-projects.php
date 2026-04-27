@@ -6,7 +6,6 @@
  */
 
 $projects_title    = function_exists( 'brc_core_get_homepage_field' ) ? brc_core_get_homepage_field( 'projects_section_title', __( 'Projects', 'brc' ) ) : __( 'Projects', 'brc' );
-$projects_intro    = function_exists( 'brc_core_get_homepage_field' ) ? brc_core_get_homepage_field( 'projects_section_intro', __( 'A selected view of the addresses shaping the next chapter of the portfolio.', 'brc' ) ) : __( 'A selected view of the addresses shaping the next chapter of the portfolio.', 'brc' );
 $projects_selected = function_exists( 'brc_core_get_homepage_field' ) ? brc_core_get_homepage_field( 'projects_selected_projects', array() ) : array();
 $projects          = function_exists( 'brc_core_home_get_project_story_items' ) ? brc_core_home_get_project_story_items( is_array( $projects_selected ) ? $projects_selected : array() ) : array();
 ?>
@@ -16,9 +15,6 @@ $projects          = function_exists( 'brc_core_home_get_project_story_items' ) 
 		<div class="brc-project-story__copy">
 			<p class="brc-kicker"><?php esc_html_e( 'Selected Projects', 'brc' ); ?></p>
 			<h2 class="brc-project-story__heading"><?php echo esc_html( $projects_title ); ?></h2>
-			<?php if ( $projects_intro ) : ?>
-				<p class="brc-section-intro brc-section-intro--project-story"><?php echo esc_html( $projects_intro ); ?></p>
-			<?php endif; ?>
 
 			<div class="brc-project-story__selector" role="tablist" aria-label="<?php esc_attr_e( 'Projects', 'brc' ); ?>">
 				<?php foreach ( $projects as $index => $project ) : ?>
