@@ -121,6 +121,54 @@ function brc_core_cleanup_duplicate_pages( string $slug, int $keep_id ): void {
 }
 
 /**
+ * Find all posts of a given type that share the same title.
+ *
+ * @return array<int>
+ */
+function brc_core_get_post_ids_by_title( string $post_type, string $title ): array {
+	global $wpdb;
+
+	$post_ids = $wpdb->get_col(
+		$wpdb->prepare(
+			"SELECT ID
+			FROM {$wpdb->posts}
+			WHERE post_type = %s
+				AND post_title = %s
+				AND post_status NOT IN ('trash', 'auto-draft', 'inherit')
+			ORDER BY ID ASC",
+			$post_type,
+			$title
+		)
+	);
+
+	return array_values(
+		array_filter(
+			array_map( 'intval', $post_ids ),
+			static fn ( int $post_id ): bool => $post_id > 0
+		)
+	);
+}
+
+/**
+ * Keep the earliest matching post and trash any later duplicates.
+ */
+function brc_core_cleanup_duplicate_posts_by_title( string $post_type, string $title ): int {
+	$post_ids = brc_core_get_post_ids_by_title( $post_type, $title );
+
+	if ( empty( $post_ids ) ) {
+		return 0;
+	}
+
+	$keep_id = (int) $post_ids[0];
+
+	foreach ( array_slice( $post_ids, 1 ) as $post_id ) {
+		wp_trash_post( $post_id );
+	}
+
+	return $keep_id;
+}
+
+/**
  * Find the untouched default Sample Page post.
  */
 function brc_core_get_default_sample_page_id(): int {
@@ -139,6 +187,11 @@ function brc_core_get_default_sample_page_id(): int {
 function brc_core_ensure_page( string $slug, string $title, string $content = '' ): int {
 	$page_ids = brc_core_get_page_ids_by_slug( $slug );
 	$keep_id  = brc_core_get_canonical_page_id( $slug, $page_ids );
+
+	if ( $keep_id ) {
+		brc_core_cleanup_duplicate_pages( $slug, $keep_id );
+	}
+
 	$existing = $keep_id ? get_post( $keep_id ) : null;
 
 	$args = array(
@@ -164,8 +217,6 @@ function brc_core_ensure_page( string $slug, string $title, string $content = ''
 		return 0;
 	}
 
-	brc_core_cleanup_duplicate_pages( $slug, (int) $page_id );
-
 	return (int) $page_id;
 }
 
@@ -186,9 +237,8 @@ function brc_core_cleanup_default_hello_world_post(): void {
 		array(
 			'post_type'      => 'post',
 			'post_status'    => 'publish',
-			'posts_per_page' => 3,
-			'orderby'        => 'date',
-			'order'          => 'DESC',
+			'posts_per_page' => 1,
+			'name'           => 'hello-world',
 		)
 	);
 
@@ -235,6 +285,10 @@ function brc_core_seed_starter_posts(): void {
 	);
 
 	foreach ( $starter_posts as $starter_post ) {
+		if ( brc_core_cleanup_duplicate_posts_by_title( 'post', $starter_post['post_title'] ) ) {
+			continue;
+		}
+
 		wp_insert_post(
 			array(
 				'post_type'    => 'post',
@@ -278,6 +332,10 @@ function brc_core_seed_starter_locations(): void {
 	);
 
 	foreach ( $locations as $index => $location ) {
+		if ( brc_core_cleanup_duplicate_posts_by_title( 'brc_location', $location['post_title'] ) ) {
+			continue;
+		}
+
 		wp_insert_post(
 			array(
 				'post_type'    => 'brc_location',
@@ -344,6 +402,10 @@ function brc_core_seed_starter_projects(): void {
 	);
 
 	foreach ( $starter_projects as $starter_project ) {
+		if ( brc_core_cleanup_duplicate_posts_by_title( 'brc_project', $starter_project['post_title'] ) ) {
+			continue;
+		}
+
 		$post_id = wp_insert_post(
 			array(
 				'post_type'    => 'brc_project',
@@ -370,12 +432,45 @@ function brc_core_seed_starter_projects(): void {
 }
 
 /**
+ * Deduplicate known starter content if a previous onboarding race created copies.
+ */
+function brc_core_cleanup_duplicate_starter_content(): void {
+	$starter_post_titles = array(
+		__( 'New Cairo demand brief', 'brc-core' ),
+		__( 'North Coast seasonality and timing', 'brc-core' ),
+	);
+
+	foreach ( $starter_post_titles as $starter_post_title ) {
+		brc_core_cleanup_duplicate_posts_by_title( 'post', $starter_post_title );
+	}
+
+	$location_titles = array(
+		__( 'New Cairo', 'brc-core' ),
+		__( 'North Coast', 'brc-core' ),
+	);
+
+	foreach ( $location_titles as $location_title ) {
+		brc_core_cleanup_duplicate_posts_by_title( 'brc_location', $location_title );
+	}
+
+	$project_titles = array(
+		__( 'BRC Heights', 'brc-core' ),
+		__( 'BRC Coast', 'brc-core' ),
+	);
+
+	foreach ( $project_titles as $project_title ) {
+		brc_core_cleanup_duplicate_posts_by_title( 'brc_project', $project_title );
+	}
+}
+
+/**
  * Seed starter content across homepage-facing content types.
  */
 function brc_core_seed_starter_content(): void {
 	brc_core_seed_starter_posts();
 	brc_core_seed_starter_locations();
 	brc_core_seed_starter_projects();
+	brc_core_cleanup_duplicate_starter_content();
 	brc_core_cleanup_default_hello_world_post();
 
 	$sample_page_id = brc_core_get_default_sample_page_id();
@@ -446,29 +541,26 @@ function brc_core_ensure_primary_menu( int $home_id, int $blog_id, int $about_id
 		),
 	);
 
-	$existing_items = wp_get_nav_menu_items( $menu_id );
-	$existing_map   = array();
+	$existing_items  = wp_get_nav_menu_items( $menu_id );
+	$managed_titles  = array_map(
+		static fn ( array $item ): string => sanitize_title( $item['title'] ),
+		$menu_items
+	);
+	$menu_position   = 1;
 
 	if ( $existing_items ) {
 		foreach ( $existing_items as $existing_item ) {
-			$key = sanitize_title( $existing_item->title );
-
-			if ( ! isset( $existing_map[ $key ] ) ) {
-				$existing_map[ $key ] = array();
+			if ( in_array( sanitize_title( $existing_item->title ), $managed_titles, true ) ) {
+				wp_delete_post( (int) $existing_item->ID, true );
 			}
-
-			$existing_map[ $key ][] = $existing_item;
 		}
 	}
 
 	foreach ( $menu_items as $menu_item ) {
-		$key             = sanitize_title( $menu_item['title'] );
-		$item_bucket     = $existing_map[ $key ] ?? array();
-		$canonical_item  = array_shift( $item_bucket );
-		$menu_item_id    = $canonical_item ? (int) $canonical_item->ID : 0;
-		$menu_item_args  = array(
+		$menu_item_args = array(
 			'menu-item-title'  => $menu_item['title'],
 			'menu-item-status' => 'publish',
+			'menu-item-position' => $menu_position,
 		);
 
 		if ( 'page' === $menu_item['kind'] && ! empty( $menu_item['object_id'] ) ) {
@@ -480,12 +572,8 @@ function brc_core_ensure_primary_menu( int $home_id, int $blog_id, int $about_id
 			$menu_item_args['menu-item-url']  = $menu_item['url'];
 		}
 
-		$updated_item_id = wp_update_nav_menu_item( $menu_id, $menu_item_id, $menu_item_args );
-		$keep_item_id    = is_wp_error( $updated_item_id ) ? $menu_item_id : (int) $updated_item_id;
-
-		foreach ( $item_bucket as $duplicate_item ) {
-			wp_delete_post( (int) $duplicate_item->ID, true );
-		}
+		wp_update_nav_menu_item( $menu_id, 0, $menu_item_args );
+		++$menu_position;
 	}
 
 	$locations            = get_theme_mod( 'nav_menu_locations' );
