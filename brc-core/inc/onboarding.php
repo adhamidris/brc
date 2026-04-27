@@ -603,6 +603,11 @@ function brc_core_ensure_primary_menu( int $home_id, int $blog_id, int $about_id
 			'url'   => get_post_type_archive_link( 'brc_unit' ) ?: '#',
 		),
 		array(
+			'title' => __( 'Careers', 'brc-core' ),
+			'kind'  => 'custom',
+			'url'   => get_post_type_archive_link( 'brc_career' ) ?: '#',
+		),
+		array(
 			'title'     => __( 'Blog', 'brc-core' ),
 			'kind'      => $blog_id ? 'page' : 'custom',
 			'object_id' => $blog_id,
@@ -660,6 +665,9 @@ function brc_core_ensure_primary_menu( int $home_id, int $blog_id, int $about_id
 	$locations            = get_theme_mod( 'nav_menu_locations' );
 	$locations            = is_array( $locations ) ? $locations : array();
 	$locations['primary'] = $menu_id;
+	if ( empty( $locations['footer'] ) ) {
+		$locations['footer'] = $menu_id;
+	}
 
 	set_theme_mod( 'nav_menu_locations', $locations );
 }
@@ -721,6 +729,7 @@ function brc_core_onboarding_needs_repair(): bool {
 		sanitize_title( __( 'Projects', 'brc-core' ) ),
 		sanitize_title( __( 'Locations', 'brc-core' ) ),
 		sanitize_title( __( 'Units', 'brc-core' ) ),
+		sanitize_title( __( 'Careers', 'brc-core' ) ),
 		sanitize_title( __( 'Blog', 'brc-core' ) ),
 		sanitize_title( __( 'About', 'brc-core' ) ),
 		sanitize_title( __( 'Contact', 'brc-core' ) ),

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: BRC Core
  * Description: Content types, fields, and schema helpers for BRC Developments.
- * Version: 0.1.4
+ * Version: 0.1.5
  * Requires at least: 6.4
  * Requires PHP: 8.0
  * Author: BRC Developments
@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BRC_CORE_VERSION', '0.1.4' );
+define( 'BRC_CORE_VERSION', '0.1.5' );
 define( 'BRC_CORE_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BRC_CORE_URL', plugin_dir_url( __FILE__ ) );
 
@@ -25,10 +25,12 @@ require_once BRC_CORE_DIR . 'inc/acf.php';
 require_once BRC_CORE_DIR . 'inc/homepage.php';
 require_once BRC_CORE_DIR . 'inc/shortcodes.php';
 require_once BRC_CORE_DIR . 'inc/onboarding.php';
+require_once BRC_CORE_DIR . 'inc/careers.php';
 
 function brc_core_activate(): void {
 	brc_core_register_post_types();
 	brc_core_register_taxonomies();
+	brc_core_register_career_post_types();
 	brc_core_run_onboarding( true );
 	flush_rewrite_rules();
 }

@@ -37,6 +37,9 @@
 				<?php esc_html_e( 'Based in Egypt. Built for editorial clarity today, ready for real contact details and legal copy at launch.', 'brc' ); ?>
 			</p>
 			<a class="site-footer__link" href="#lead-form"><?php esc_html_e( 'Register Interest', 'brc' ); ?></a>
+			<?php if ( post_type_exists( 'brc_career' ) ) : ?>
+				<a class="site-footer__link" href="<?php echo esc_url( get_post_type_archive_link( 'brc_career' ) ); ?>"><?php esc_html_e( 'Careers / الوظائف', 'brc' ); ?></a>
+			<?php endif; ?>
 		</div>
 
 		<div class="site-footer__bottom">

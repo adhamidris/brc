@@ -1497,6 +1497,73 @@ a {
 	line-height: 1.1;
 }
 
+.brc-page-header--careers {
+	display: grid;
+	gap: 18px;
+}
+
+.brc-careers-intro {
+	max-width: 820px;
+	margin: 0;
+	color: rgba(16, 19, 18, 0.68);
+	font-size: 1.05rem;
+	line-height: 1.75;
+}
+
+.brc-card-grid--careers {
+	padding-bottom: 96px;
+}
+
+.brc-card--career {
+	border: 1px solid rgba(16, 19, 18, 0.08);
+	box-shadow: 0 24px 54px rgba(16, 19, 18, 0.04);
+	transition:
+		transform 220ms ease,
+		box-shadow 220ms ease,
+		border-color 220ms ease;
+}
+
+.brc-card--career:hover {
+	transform: translate3d(0, -4px, 0);
+	box-shadow: 0 30px 68px rgba(16, 19, 18, 0.08);
+	border-color: rgba(16, 19, 18, 0.14);
+}
+
+.brc-card__body--career {
+	display: grid;
+	gap: 12px;
+	align-content: start;
+}
+
+.brc-career-card__meta {
+	margin: -2px 0 0;
+	color: rgba(16, 19, 18, 0.48);
+	font-size: 0.82rem;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+
+.brc-card__body--career > p:last-of-type {
+	margin: 0;
+	color: rgba(16, 19, 18, 0.7);
+	line-height: 1.7;
+}
+
+.brc-card__cta {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	width: fit-content;
+	margin-top: 8px;
+	padding-bottom: 4px;
+	border-bottom: 1px solid rgba(16, 19, 18, 0.18);
+	font-size: 0.86rem;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
 .brc-metrics {
 	background: var(--brc-color-ivory);
 }
@@ -1908,6 +1975,101 @@ a {
 	font-weight: 700;
 }
 
+.brc-career-layout--apply .brc-detail-layout__content > * {
+	width: 100%;
+}
+
+.brc-career-content {
+	display: grid;
+	gap: 36px;
+}
+
+.brc-career-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+
+.brc-career-application {
+	display: grid;
+	gap: 24px;
+	padding: 32px;
+	border: 1px solid rgba(16, 19, 18, 0.08);
+	border-radius: 10px;
+	background: #faf7f0;
+}
+
+.brc-career-application__intro {
+	display: grid;
+	gap: 12px;
+}
+
+.brc-career-application__intro h2 {
+	margin: 0;
+	font-family: var(--brc-font-serif);
+	font-size: clamp(2rem, 4vw, 3.2rem);
+	font-weight: 400;
+	line-height: 0.98;
+}
+
+.brc-career-application__intro p:last-child {
+	margin: 0;
+	color: rgba(16, 19, 18, 0.7);
+	line-height: 1.75;
+}
+
+.brc-career-form {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.brc-career-form__file,
+.brc-career-form__message {
+	grid-column: 1 / -1;
+}
+
+.brc-career-form input[type="file"] {
+	padding: 14px 0 0;
+	background: transparent;
+	border: 0;
+	box-shadow: none;
+}
+
+.brc-career-form input[type="file"]::file-selector-button {
+	margin-right: 14px;
+	padding: 10px 16px;
+	border: 1px solid rgba(16, 19, 18, 0.16);
+	border-radius: 999px;
+	background: #fff;
+	color: var(--brc-color-ink);
+	font: inherit;
+	font-size: 0.88rem;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.brc-form-notice {
+	padding: 16px 18px;
+	border-radius: 8px;
+	font-size: 0.96rem;
+	line-height: 1.6;
+}
+
+.brc-form-notice p {
+	margin: 0;
+}
+
+.brc-form-notice--success {
+	background: rgba(62, 115, 86, 0.1);
+	border: 1px solid rgba(62, 115, 86, 0.24);
+	color: #244731;
+}
+
+.brc-form-notice--error {
+	background: rgba(151, 54, 54, 0.08);
+	border: 1px solid rgba(151, 54, 54, 0.18);
+	color: #6a2323;
+}
+
 .site-footer {
 	background: var(--brc-color-ink);
 	color: var(--brc-color-white);
@@ -2216,6 +2378,10 @@ a {
 		grid-template-columns: 1fr;
 	}
 
+	.brc-career-form {
+		grid-template-columns: 1fr;
+	}
+
 		.brc-lead-cta h2,
 		.brc-lead-cta > p,
 		.brc-lead-cta .brc-lead-form,
@@ -2231,6 +2397,10 @@ a {
 
 	.brc-detail-layout__aside {
 		order: 2;
+	}
+
+	.brc-career-application {
+		padding: 24px 20px;
 	}
 }
 
