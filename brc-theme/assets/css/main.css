@@ -908,7 +908,7 @@ a {
 .brc-project-story__inner {
 	display: grid;
 	grid-template-columns: minmax(300px, 430px) minmax(0, 1fr);
-	align-items: start;
+	align-items: stretch;
 	gap: clamp(28px, 4vw, 64px);
 	width: calc(100vw - (var(--brc-project-story-gutter) * 2));
 	margin-left: var(--brc-project-story-gutter);
@@ -1043,10 +1043,11 @@ a {
 .brc-project-story__stage {
 	position: relative;
 	display: grid;
-	align-items: start;
+	align-items: stretch;
 	justify-items: stretch;
-	align-content: start;
-	min-height: 0;
+	align-content: stretch;
+	align-self: stretch;
+	min-height: 100%;
 	padding-left: clamp(22px, 3vw, 44px);
 }
 
@@ -1063,8 +1064,8 @@ a {
 	position: relative;
 	width: 100%;
 	max-width: none;
-	aspect-ratio: 16 / 10;
-	max-height: min(560px, 56vh);
+	height: 100%;
+	min-height: 100%;
 	overflow: hidden;
 	border-radius: 8px;
 	box-shadow: 0 24px 60px rgba(16, 19, 18, 0.08);
@@ -1516,7 +1517,7 @@ a {
 
 .brc-metrics__grid {
 	display: grid;
-	grid-template-columns: repeat(4, minmax(0, 1fr));
+	grid-template-columns: repeat(3, minmax(0, 1fr));
 	gap: clamp(28px, 3vw, 56px);
 }
 
@@ -2125,8 +2126,8 @@ a {
 
 	.brc-project-story__panels {
 		width: 100%;
-		aspect-ratio: 16 / 10;
-		max-height: min(68vh, 640px);
+		height: min(68vh, 640px);
+		min-height: 0;
 	}
 
 	.brc-insights__layout {
@@ -2279,7 +2280,7 @@ a {
 	}
 
 	.brc-project-story__panels {
-		max-height: 56vh;
+		height: 56vh;
 	}
 
 	.brc-insights {
