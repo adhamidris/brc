@@ -53,6 +53,28 @@ function brc_core_get_homepage_field( string $key, $default = '', int $post_id =
 }
 
 /**
+ * Retrieve the first non-empty homepage field from a list of keys.
+ *
+ * @param array<int, string> $keys    Candidate field names.
+ * @param mixed              $default Fallback value.
+ * @param int                $post_id Optional post ID override.
+ * @return mixed
+ */
+function brc_core_get_homepage_field_any( array $keys, $default = '', int $post_id = 0 ) {
+	foreach ( $keys as $key ) {
+		$value = brc_core_get_homepage_field( $key, null, $post_id );
+
+		if ( null === $value || '' === $value || array() === $value ) {
+			continue;
+		}
+
+		return $value;
+	}
+
+	return $default;
+}
+
+/**
  * Default homepage editor content used for onboarding and resilient rendering.
  */
 function brc_core_get_default_homepage_content(): string {
@@ -97,6 +119,7 @@ function brc_core_register_acf_groups(): void {
 					'label'         => __( 'Hero Kicker', 'brc-core' ),
 					'name'          => 'hero_kicker',
 					'type'          => 'text',
+					'instructions'  => __( 'Short label above the headline. Keep it to 2 to 4 words.', 'brc-core' ),
 					'default_value' => 'BRC Developments',
 				),
 				array(
@@ -106,6 +129,7 @@ function brc_core_register_acf_groups(): void {
 					'type'          => 'textarea',
 					'rows'          => 3,
 					'new_lines'     => 'br',
+					'instructions'  => __( 'Main statement. Aim for 6 to 14 words.', 'brc-core' ),
 					'default_value' => 'Architecture-led communities for a new Egyptian address.',
 				),
 				array(
@@ -115,6 +139,7 @@ function brc_core_register_acf_groups(): void {
 					'type'          => 'textarea',
 					'rows'          => 4,
 					'new_lines'     => 'br',
+					'instructions'  => __( 'Supporting copy. Keep it tight, ideally 18 to 35 words.', 'brc-core' ),
 					'default_value' => 'Premium real estate developments shaped around location, architecture, and long-term value.',
 				),
 				array(
@@ -124,13 +149,14 @@ function brc_core_register_acf_groups(): void {
 					'type'          => 'image',
 					'return_format' => 'array',
 					'preview_size'  => 'medium',
-					'instructions'  => __( 'Use a dark architectural image that supports white text.', 'brc-core' ),
+					'instructions'  => __( 'Landscape image, ideally 16:9 or wider. Use architecture or lifestyle imagery dark enough for white text.', 'brc-core' ),
 				),
 				array(
 					'key'           => 'field_brc_hero_primary_label',
 					'label'         => __( 'Primary CTA Label', 'brc-core' ),
 					'name'          => 'hero_primary_label',
 					'type'          => 'text',
+					'instructions'  => __( 'Short action label. 2 to 4 words works best.', 'brc-core' ),
 					'default_value' => 'Register Interest',
 				),
 				array(
@@ -138,6 +164,7 @@ function brc_core_register_acf_groups(): void {
 					'label'         => __( 'Primary CTA URL', 'brc-core' ),
 					'name'          => 'hero_primary_url',
 					'type'          => 'url',
+					'instructions'  => __( 'Usually an anchor like #lead-form or a full landing-page URL.', 'brc-core' ),
 					'default_value' => '#lead-form',
 				),
 				array(
@@ -145,6 +172,7 @@ function brc_core_register_acf_groups(): void {
 					'label'         => __( 'Secondary CTA Label', 'brc-core' ),
 					'name'          => 'hero_secondary_label',
 					'type'          => 'text',
+					'instructions'  => __( 'Optional secondary action. Keep it brief.', 'brc-core' ),
 					'default_value' => 'Explore Projects',
 				),
 				array(
@@ -154,10 +182,34 @@ function brc_core_register_acf_groups(): void {
 					'type'  => 'url',
 				),
 				array(
+					'key'           => 'field_brc_hero_show_whatsapp',
+					'label'         => __( 'Show WhatsApp CTA', 'brc-core' ),
+					'name'          => 'hero_show_whatsapp',
+					'type'          => 'true_false',
+					'ui'            => 1,
+					'default_value' => 0,
+				),
+				array(
+					'key'          => 'field_brc_hero_whatsapp_url',
+					'label'        => __( 'Hero WhatsApp URL', 'brc-core' ),
+					'name'         => 'hero_whatsapp_url',
+					'type'         => 'url',
+					'instructions' => __( 'Optional direct WhatsApp link for the hero section.', 'brc-core' ),
+				),
+				array(
 					'key'   => 'field_brc_tab_metrics',
 					'label' => __( 'Metrics', 'brc-core' ),
 					'name'  => '',
 					'type'  => 'tab',
+				),
+				array(
+					'key'          => 'field_brc_metrics_intro',
+					'label'        => __( 'Metrics Intro', 'brc-core' ),
+					'name'         => 'metrics_intro',
+					'type'         => 'textarea',
+					'rows'         => 3,
+					'new_lines'    => 'br',
+					'instructions' => __( 'Optional line above the metrics. Keep it concise.', 'brc-core' ),
 				),
 				array(
 					'key'          => 'field_brc_metrics_items',
@@ -166,6 +218,7 @@ function brc_core_register_acf_groups(): void {
 					'type'         => 'repeater',
 					'button_label' => __( 'Add Metric', 'brc-core' ),
 					'layout'       => 'table',
+					'instructions' => __( 'Add 3 to 4 headline metrics. Use short labels and values like 24, 12+, or 1.8M.', 'brc-core' ),
 					'sub_fields'   => array(
 						array(
 							'key'   => 'field_brc_metric_label',
@@ -183,7 +236,7 @@ function brc_core_register_acf_groups(): void {
 				),
 				array(
 					'key'   => 'field_brc_tab_launches',
-					'label' => __( 'Launches & Journal', 'brc-core' ),
+					'label' => __( 'Latest Launches', 'brc-core' ),
 					'name'  => '',
 					'type'  => 'tab',
 				),
@@ -192,29 +245,102 @@ function brc_core_register_acf_groups(): void {
 					'label'         => __( 'Latest Launches Title', 'brc-core' ),
 					'name'          => 'launches_section_title',
 					'type'          => 'text',
+					'instructions'  => __( 'Section heading above the dynamic launches carousel.', 'brc-core' ),
 					'default_value' => 'Latest Launches',
+				),
+				array(
+					'key'          => 'field_brc_launches_section_intro',
+					'label'        => __( 'Latest Launches Intro', 'brc-core' ),
+					'name'         => 'launches_section_intro',
+					'type'         => 'textarea',
+					'rows'         => 3,
+					'new_lines'    => 'br',
+					'instructions' => __( 'Optional editorial intro. 18 to 35 words is ideal.', 'brc-core' ),
 				),
 				array(
 					'key'           => 'field_brc_launches_count',
 					'label'         => __( 'Latest Launches Count', 'brc-core' ),
 					'name'          => 'launches_count',
 					'type'          => 'number',
+					'instructions'  => __( 'How many projects to show when no manual selection is set.', 'brc-core' ),
 					'default_value' => 8,
 					'min'           => 1,
 					'max'           => 12,
+				),
+				array(
+					'key'           => 'field_brc_launches_selected_projects',
+					'label'         => __( 'Selected Launch Projects', 'brc-core' ),
+					'name'          => 'launches_selected_projects',
+					'type'          => 'relationship',
+					'post_type'     => array( 'brc_project' ),
+					'filters'       => array( 'search' ),
+					'return_format' => 'id',
+					'instructions'  => __( 'Optional manual override. Leave empty to use featured projects automatically.', 'brc-core' ),
+				),
+				array(
+					'key'   => 'field_brc_tab_projects',
+					'label' => __( 'Projects Selector', 'brc-core' ),
+					'name'  => '',
+					'type'  => 'tab',
+				),
+				array(
+					'key'           => 'field_brc_projects_section_title',
+					'label'         => __( 'Projects Section Title', 'brc-core' ),
+					'name'          => 'projects_section_title',
+					'type'          => 'text',
+					'instructions'  => __( 'Heading above the selected projects section.', 'brc-core' ),
+					'default_value' => 'Projects',
+				),
+				array(
+					'key'           => 'field_brc_projects_section_intro',
+					'label'         => __( 'Projects Section Intro', 'brc-core' ),
+					'name'          => 'projects_section_intro',
+					'type'          => 'textarea',
+					'rows'          => 3,
+					'new_lines'     => 'br',
+					'instructions'  => __( 'Short overview for the selector. Aim for 15 to 30 words.', 'brc-core' ),
+					'default_value' => 'A selected view of the addresses shaping the next chapter of the portfolio.',
+				),
+				array(
+					'key'           => 'field_brc_projects_selected_projects',
+					'label'         => __( 'Selected Projects', 'brc-core' ),
+					'name'          => 'projects_selected_projects',
+					'type'          => 'relationship',
+					'post_type'     => array( 'brc_project' ),
+					'filters'       => array( 'search' ),
+					'return_format' => 'id',
+					'instructions'  => __( 'Pick the projects to feature here. Leave empty to use featured projects.', 'brc-core' ),
+				),
+				array(
+					'key'   => 'field_brc_tab_market_notes',
+					'label' => __( 'Market Notes', 'brc-core' ),
+					'name'  => '',
+					'type'  => 'tab',
 				),
 				array(
 					'key'           => 'field_brc_market_notes_title',
 					'label'         => __( 'Market Notes Title', 'brc-core' ),
 					'name'          => 'market_notes_title',
 					'type'          => 'text',
+					'instructions'  => __( 'Section heading above the editorial feed.', 'brc-core' ),
 					'default_value' => 'Market Notes',
 				),
 				array(
-					'key'           => 'field_brc_market_notes_count',
+					'key'           => 'field_brc_market_notes_featured_post',
+					'label'         => __( 'Featured Market Note', 'brc-core' ),
+					'name'          => 'market_notes_featured_post',
+					'type'          => 'post_object',
+					'post_type'     => array( 'post' ),
+					'return_format' => 'id',
+					'ui'            => 1,
+					'instructions'  => __( 'Optional manual featured article. Leave empty to feature the latest post automatically.', 'brc-core' ),
+				),
+				array(
+					'key'           => 'field_brc_market_notes_posts_count',
 					'label'         => __( 'Market Notes Count', 'brc-core' ),
-					'name'          => 'market_notes_count',
+					'name'          => 'market_notes_posts_count',
 					'type'          => 'number',
+					'instructions'  => __( 'Total number of posts including the featured card.', 'brc-core' ),
 					'default_value' => 4,
 					'min'           => 2,
 					'max'           => 6,
@@ -230,6 +356,7 @@ function brc_core_register_acf_groups(): void {
 					'label'         => __( 'About Kicker', 'brc-core' ),
 					'name'          => 'about_kicker',
 					'type'          => 'text',
+					'instructions'  => __( 'Small label above the About heading.', 'brc-core' ),
 					'default_value' => 'About BRC',
 				),
 				array(
@@ -239,6 +366,7 @@ function brc_core_register_acf_groups(): void {
 					'type'          => 'textarea',
 					'rows'          => 3,
 					'new_lines'     => 'br',
+					'instructions'  => __( 'Main About heading. Keep it to 8 to 18 words.', 'brc-core' ),
 					'default_value' => 'We build quieter, longer-lasting places with an emphasis on proportion, value, and measured growth.',
 				),
 				array(
@@ -248,6 +376,7 @@ function brc_core_register_acf_groups(): void {
 					'type'          => 'textarea',
 					'rows'          => 5,
 					'new_lines'     => 'br',
+					'instructions'  => __( 'One concise brand statement or paragraph. Avoid turning this into a full company profile.', 'brc-core' ),
 					'default_value' => 'BRC approaches development as a long-term responsibility. The focus is not only on launch momentum, but on how each address holds its quality over time through architecture, planning, and disciplined execution.',
 				),
 				array(
@@ -257,6 +386,7 @@ function brc_core_register_acf_groups(): void {
 					'type'          => 'image',
 					'return_format' => 'array',
 					'preview_size'  => 'medium',
+					'instructions'  => __( 'Landscape image, ideally architecture or lifestyle photography. Avoid logos or text-heavy artwork.', 'brc-core' ),
 				),
 				array(
 					'key'   => 'field_brc_tab_lead',
@@ -271,6 +401,7 @@ function brc_core_register_acf_groups(): void {
 					'type'          => 'textarea',
 					'rows'          => 3,
 					'new_lines'     => 'br',
+					'instructions'  => __( 'Direct closing headline for the conversion section.', 'brc-core' ),
 					'default_value' => 'Register your interest',
 				),
 				array(
@@ -280,6 +411,7 @@ function brc_core_register_acf_groups(): void {
 					'type'          => 'textarea',
 					'rows'          => 4,
 					'new_lines'     => 'br',
+					'instructions'  => __( 'Short explanation before the form or WhatsApp action.', 'brc-core' ),
 					'default_value' => 'Share your details and our team will contact you shortly.',
 				),
 				array(
@@ -289,6 +421,7 @@ function brc_core_register_acf_groups(): void {
 					'type'          => 'image',
 					'return_format' => 'array',
 					'preview_size'  => 'medium',
+					'instructions'  => __( 'Wide image, ideally atmospheric and dark enough for white text overlays.', 'brc-core' ),
 				),
 				array(
 					'key'          => 'field_brc_lead_form_shortcode',
@@ -296,6 +429,21 @@ function brc_core_register_acf_groups(): void {
 					'name'         => 'lead_form_shortcode',
 					'type'         => 'text',
 					'instructions' => __( 'Paste the chosen form plugin shortcode here when the live form is ready.', 'brc-core' ),
+				),
+				array(
+					'key'           => 'field_brc_lead_whatsapp_label',
+					'label'         => __( 'Lead WhatsApp Label', 'brc-core' ),
+					'name'          => 'lead_whatsapp_label',
+					'type'          => 'text',
+					'instructions'  => __( 'Optional support action under the form. Keep it brief.', 'brc-core' ),
+					'default_value' => 'Message us on WhatsApp',
+				),
+				array(
+					'key'          => 'field_brc_lead_whatsapp_url',
+					'label'        => __( 'Lead WhatsApp URL', 'brc-core' ),
+					'name'         => 'lead_whatsapp_url',
+					'type'         => 'url',
+					'instructions' => __( 'Optional direct WhatsApp link for the lead section.', 'brc-core' ),
 				),
 			),
 		)

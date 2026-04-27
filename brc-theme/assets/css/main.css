@@ -543,6 +543,18 @@ a {
 	letter-spacing: 0;
 }
 
+.brc-section-intro {
+	margin: 14px 0 0;
+	max-width: 680px;
+	color: rgba(16, 19, 18, 0.62);
+	font-size: 1rem;
+	line-height: 1.7;
+}
+
+.brc-section-intro--light {
+	color: rgba(16, 19, 18, 0.58);
+}
+
 .brc-locations-strip h2 {
 	margin: 0;
 	font-family: var(--brc-font-serif);
@@ -880,6 +892,12 @@ a {
 	border-color: rgba(16, 19, 18, 0.14);
 }
 
+.brc-launch-card__cta.is-disabled,
+.brc-launch-card__cta[aria-disabled="true"] {
+	opacity: 0.58;
+	pointer-events: none;
+}
+
 .brc-project-story {
 	--brc-project-story-gutter: max(28px, calc((100vw - 1640px) / 2));
 	background: var(--brc-color-ivory);
@@ -901,6 +919,20 @@ a {
 	display: grid;
 	align-content: start;
 	gap: 22px;
+}
+
+.brc-project-story__heading {
+	margin: -6px 0 0;
+	font-family: var(--brc-font-serif);
+	font-size: clamp(2.2rem, 3.2vw, 3.3rem);
+	font-weight: 400;
+	line-height: 0.98;
+	letter-spacing: 0;
+}
+
+.brc-section-intro--project-story {
+	max-width: 380px;
+	margin: -8px 0 4px;
 }
 
 .brc-project-story__selector {
@@ -1005,6 +1037,12 @@ a {
 	color: rgba(16, 19, 18, 0.72);
 	border-color: rgba(16, 19, 18, 0.38);
 	transform: translate3d(0, -1px, 0);
+}
+
+.brc-project-story__cta.is-disabled,
+.brc-project-story__cta[aria-disabled="true"] {
+	opacity: 0.5;
+	pointer-events: none;
 }
 
 .brc-project-story__stage {
@@ -1474,6 +1512,11 @@ a {
 	margin-right: auto;
 }
 
+.brc-section-intro--metrics {
+	margin-bottom: 22px;
+	max-width: 520px;
+}
+
 .brc-metrics__grid {
 	display: grid;
 	grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1613,6 +1656,14 @@ a {
 	box-shadow: 0 34px 80px rgba(0, 0, 0, 0.24);
 	backdrop-filter: blur(14px);
 	margin-top: 0;
+}
+
+.brc-lead-cta__actions {
+	position: relative;
+	z-index: 1;
+	grid-column: 2;
+	justify-self: start;
+	margin-top: -8px;
 }
 
 .brc-lead-cta::before {
@@ -2166,12 +2217,18 @@ a {
 		grid-template-columns: 1fr;
 	}
 
-	.brc-lead-cta h2,
-	.brc-lead-cta > p,
-	.brc-lead-cta .brc-lead-form {
-		justify-self: stretch;
-		max-width: none;
-	}
+		.brc-lead-cta h2,
+		.brc-lead-cta > p,
+		.brc-lead-cta .brc-lead-form,
+		.brc-lead-cta__actions {
+			justify-self: stretch;
+			max-width: none;
+		}
+
+		.brc-lead-cta__actions {
+			grid-column: auto;
+			margin-top: 0;
+		}
 
 	.brc-detail-layout__aside {
 		order: 2;

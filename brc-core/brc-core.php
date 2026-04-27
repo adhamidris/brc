@@ -20,9 +20,10 @@ define( 'BRC_CORE_URL', plugin_dir_url( __FILE__ ) );
 require_once BRC_CORE_DIR . 'inc/post-types.php';
 require_once BRC_CORE_DIR . 'inc/taxonomies.php';
 require_once BRC_CORE_DIR . 'inc/meta.php';
-require_once BRC_CORE_DIR . 'inc/shortcodes.php';
 require_once BRC_CORE_DIR . 'inc/schema.php';
 require_once BRC_CORE_DIR . 'inc/acf.php';
+require_once BRC_CORE_DIR . 'inc/homepage.php';
+require_once BRC_CORE_DIR . 'inc/shortcodes.php';
 require_once BRC_CORE_DIR . 'inc/onboarding.php';
 
 function brc_core_activate(): void {

@@ -8,15 +8,21 @@
 $hero_kicker          = function_exists( 'brc_core_get_homepage_field' ) ? brc_core_get_homepage_field( 'hero_kicker', 'BRC Developments' ) : 'BRC Developments';
 $hero_title           = function_exists( 'brc_core_get_homepage_field' ) ? brc_core_get_homepage_field( 'hero_title', 'Architecture-led communities for a new Egyptian address.' ) : 'Architecture-led communities for a new Egyptian address.';
 $hero_body            = function_exists( 'brc_core_get_homepage_field' ) ? brc_core_get_homepage_field( 'hero_body', 'Premium real estate developments shaped around location, architecture, and long-term value.' ) : 'Premium real estate developments shaped around location, architecture, and long-term value.';
-$hero_primary_label   = function_exists( 'brc_core_get_homepage_field' ) ? brc_core_get_homepage_field( 'hero_primary_label', 'Register Interest' ) : 'Register Interest';
-$hero_primary_url     = function_exists( 'brc_core_get_homepage_field' ) ? brc_core_get_homepage_field( 'hero_primary_url', '#lead-form' ) : '#lead-form';
-$hero_secondary_label = function_exists( 'brc_core_get_homepage_field' ) ? brc_core_get_homepage_field( 'hero_secondary_label', 'Explore Projects' ) : 'Explore Projects';
-$hero_secondary_url   = function_exists( 'brc_core_get_homepage_field' ) ? brc_core_get_homepage_field( 'hero_secondary_url', get_post_type_archive_link( 'brc_project' ) ) : get_post_type_archive_link( 'brc_project' );
+$hero_primary_label   = function_exists( 'brc_core_get_homepage_field_any' ) ? brc_core_get_homepage_field_any( array( 'hero_cta_primary_label', 'hero_primary_label' ), 'Register Interest' ) : 'Register Interest';
+$hero_primary_url     = function_exists( 'brc_core_get_homepage_field_any' ) ? brc_core_get_homepage_field_any( array( 'hero_cta_primary_url', 'hero_primary_url' ), '#lead-form' ) : '#lead-form';
+$hero_secondary_label = function_exists( 'brc_core_get_homepage_field_any' ) ? brc_core_get_homepage_field_any( array( 'hero_cta_secondary_label', 'hero_secondary_label' ), 'Explore Projects' ) : 'Explore Projects';
+$hero_secondary_url   = function_exists( 'brc_core_get_homepage_field_any' ) ? brc_core_get_homepage_field_any( array( 'hero_cta_secondary_url', 'hero_secondary_url' ), get_post_type_archive_link( 'brc_project' ) ) : get_post_type_archive_link( 'brc_project' );
 $hero_background      = function_exists( 'brc_core_get_homepage_field' ) ? brc_core_get_homepage_field( 'hero_background_image', array() ) : array();
+$hero_show_whatsapp   = function_exists( 'brc_core_get_homepage_field' ) ? (bool) brc_core_get_homepage_field( 'hero_show_whatsapp', false ) : false;
+$hero_whatsapp_url    = function_exists( 'brc_core_get_homepage_field' ) ? brc_core_get_homepage_field( 'hero_whatsapp_url', '' ) : '';
 $hero_background_url  = '';
 
 if ( is_array( $hero_background ) && ! empty( $hero_background['url'] ) ) {
 	$hero_background_url = (string) $hero_background['url'];
+}
+
+if ( ! $hero_background_url && function_exists( 'brc_core_home_fallback_image_url' ) ) {
+	$hero_background_url = brc_core_home_fallback_image_url( 'hero' );
 }
 ?>
 
@@ -33,6 +39,9 @@ if ( is_array( $hero_background ) && ! empty( $hero_background['url'] ) ) {
 			<div class="home-hero__actions">
 				<a class="brc-button brc-button--light" href="<?php echo esc_url( $hero_primary_url ); ?>"><?php echo esc_html( $hero_primary_label ); ?></a>
 				<a class="brc-button brc-button--glass" href="<?php echo esc_url( $hero_secondary_url ); ?>"><?php echo esc_html( $hero_secondary_label ); ?></a>
+				<?php if ( $hero_show_whatsapp && $hero_whatsapp_url ) : ?>
+					<a class="brc-button brc-button--glass" href="<?php echo esc_url( $hero_whatsapp_url ); ?>"><?php esc_html_e( 'WhatsApp', 'brc' ); ?></a>
+				<?php endif; ?>
 			</div>
 		</div>
 	</div>
