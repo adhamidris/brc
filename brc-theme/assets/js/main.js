@@ -244,25 +244,23 @@
 		return;
 	}
 
-	const items = Array.from(section.querySelectorAll('[data-project-story-item]'));
+	const tabs = Array.from(section.querySelectorAll('[data-project-tab]'));
+	const details = Array.from(section.querySelectorAll('[data-project-detail]'));
+	const panels = Array.from(section.querySelectorAll('[data-project-panel]'));
 
-	if (!items.length) {
+	if (!tabs.length || !details.length || !panels.length) {
 		return;
 	}
 
-	const imageStates = items.map(function (item) {
+	const imageStates = panels.map(function (panel) {
 		return {
-			images: Array.from(item.querySelectorAll('[data-project-story-image]')),
+			images: Array.from(panel.querySelectorAll('[data-project-image]')),
 			index: 0,
 		};
 	});
 
 	let activeIndex = 0;
 	let autoplay = null;
-
-	const clamp = function (value, min, max) {
-		return Math.min(max, Math.max(min, value));
-	};
 
 	const syncImages = function (state) {
 		state.images.forEach(function (image, index) {
@@ -288,64 +286,68 @@
 	};
 
 	const setActive = function (index) {
-		if (index === activeIndex || !items[index]) {
+		if (index === activeIndex || !tabs[index] || !details[index] || !panels[index]) {
 			return;
 		}
 
-		items[activeIndex].classList.remove('is-active');
-		items[index].classList.add('is-active');
+		tabs.forEach(function (tab, tabIndex) {
+			const isActive = tabIndex === index;
+			tab.classList.toggle('is-active', isActive);
+			tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+			tab.tabIndex = isActive ? 0 : -1;
+		});
+
+		details.forEach(function (detail, detailIndex) {
+			detail.classList.toggle('is-active', detailIndex === index);
+		});
+
+		panels.forEach(function (panel, panelIndex) {
+			const isActive = panelIndex === index;
+			panel.classList.toggle('is-active', isActive);
+			panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+		});
+
 		activeIndex = index;
 		startAutoplay();
 	};
 
-	const applyMobileState = function () {
-		items.forEach(function (item, index) {
-			item.classList.toggle('is-active', index === activeIndex);
+	tabs.forEach(function (tab, index) {
+		tab.addEventListener('click', function () {
+			setActive(index);
 		});
-	};
 
-	const syncFromScroll = function () {
-		if (window.innerWidth <= 900) {
-			applyMobileState();
-			return;
-		}
+		tab.addEventListener('keydown', function (event) {
+			if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp' && event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') {
+				return;
+			}
 
-		const scrollable = section.offsetHeight - window.innerHeight;
+			event.preventDefault();
 
-		if (scrollable <= 0) {
-			return;
-		}
+			let nextIndex = index;
 
-		const rect = section.getBoundingClientRect();
-		const progress = Math.max(0, Math.min(1, (-rect.top) / scrollable));
-		let nextIndex = activeIndex;
+			if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+				nextIndex = (index + 1) % tabs.length;
+			}
 
-		if (activeIndex === 0 && progress >= 0.56) {
-			nextIndex = 1;
-		} else if (activeIndex === 1 && progress <= 0.44) {
-			nextIndex = 0;
-		}
+			if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+				nextIndex = (index - 1 + tabs.length) % tabs.length;
+			}
 
-		setActive(nextIndex);
-	};
+			setActive(nextIndex);
+			tabs[nextIndex].focus();
+		});
+	});
+
+	panels.forEach(function (panel) {
+		panel.addEventListener('mouseenter', function () {
+			window.clearInterval(autoplay);
+		});
+
+		panel.addEventListener('mouseleave', function () {
+			startAutoplay();
+		});
+	});
 
 	startAutoplay();
-	syncFromScroll();
-
-	let ticking = false;
-
-	const requestSync = function () {
-		if (ticking) {
-			return;
-		}
-
-		ticking = true;
-		window.requestAnimationFrame(function () {
-			syncFromScroll();
-			ticking = false;
-		});
-	};
-
-	window.addEventListener('scroll', requestSync, { passive: true });
-	window.addEventListener('resize', requestSync);
+	setActive(0);
 })();

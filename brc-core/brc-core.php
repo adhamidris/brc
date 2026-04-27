@@ -22,10 +22,13 @@ require_once BRC_CORE_DIR . 'inc/taxonomies.php';
 require_once BRC_CORE_DIR . 'inc/meta.php';
 require_once BRC_CORE_DIR . 'inc/shortcodes.php';
 require_once BRC_CORE_DIR . 'inc/schema.php';
+require_once BRC_CORE_DIR . 'inc/acf.php';
+require_once BRC_CORE_DIR . 'inc/onboarding.php';
 
 function brc_core_activate(): void {
 	brc_core_register_post_types();
 	brc_core_register_taxonomies();
+	brc_core_run_onboarding( true );
 	flush_rewrite_rules();
 }
 register_activation_hook( __FILE__, 'brc_core_activate' );
@@ -34,4 +37,3 @@ function brc_core_deactivate(): void {
 	flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'brc_core_deactivate' );
-

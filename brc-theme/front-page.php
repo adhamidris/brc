@@ -15,13 +15,15 @@ if ( have_posts() ) :
 		?>
 		<article <?php post_class( 'entry entry--front-page' ); ?>>
 			<?php get_template_part( 'template-parts/home-hero' ); ?>
-			<?php if ( trim( get_the_content() ) ) : ?>
-				<div class="entry-content">
+			<div class="entry-content">
+				<?php if ( trim( get_the_content() ) ) : ?>
 					<?php the_content(); ?>
-				</div>
-			<?php else : ?>
-				<?php get_template_part( 'template-parts/home-empty' ); ?>
-			<?php endif; ?>
+				<?php elseif ( function_exists( 'brc_core_get_default_homepage_content' ) ) : ?>
+					<?php echo do_blocks( brc_core_get_default_homepage_content() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+				<?php else : ?>
+					<?php get_template_part( 'template-parts/home-empty' ); ?>
+				<?php endif; ?>
+			</div>
 		</article>
 		<?php
 	endwhile;

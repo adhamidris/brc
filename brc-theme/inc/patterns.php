@@ -42,7 +42,7 @@ function brc_theme_register_patterns(): void {
 		array(
 			'title'      => __( 'BRC Lead CTA', 'brc' ),
 			'categories' => array( 'brc-sections' ),
-			'content'    => '<!-- wp:group {"className":"brc-section brc-lead-cta alignfull","layout":{"type":"constrained"}} --><div id="lead-form" class="wp-block-group brc-section brc-lead-cta alignfull"><!-- wp:heading --><h2 class="wp-block-heading">Register your interest</h2><!-- /wp:heading --><!-- wp:paragraph --><p>Share your details and our team will contact you shortly.</p><!-- /wp:paragraph --><!-- wp:shortcode -->[brc_lead_form_placeholder]<!-- /wp:shortcode --></div><!-- /wp:group -->',
+			'content'    => '<!-- wp:shortcode -->[brc_lead_section]<!-- /wp:shortcode -->',
 		)
 	);
 }
