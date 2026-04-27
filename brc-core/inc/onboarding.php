@@ -782,6 +782,7 @@ function brc_core_run_onboarding( bool $force = false ): void {
 		$contact_id = brc_core_ensure_page( 'contact', __( 'Contact', 'brc-core' ), '<!-- wp:paragraph --><p>' . esc_html__( 'Use this page for contact details, WhatsApp, office locations, and lead routing notes.', 'brc-core' ) . '</p><!-- /wp:paragraph -->' );
 
 		if ( $home_id ) {
+			brc_core_sync_homepage_editor_content( $home_id );
 			update_option( 'show_on_front', 'page' );
 			update_option( 'page_on_front', $home_id );
 		}

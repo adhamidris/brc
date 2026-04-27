@@ -102,9 +102,16 @@ $home_id = brc_seed_post(
 		'post_name'    => 'home',
 		'post_title'   => 'Home',
 		'post_content' => <<<HTML
-<!-- wp:shortcode -->[brc_success_metrics]<!-- /wp:shortcode -->
-<!-- wp:shortcode -->[brc_featured_projects]<!-- /wp:shortcode -->
-<!-- wp:pattern {"slug":"brc/lead-cta"} /-->
+<!-- wp:group {"className":"brc-homepage-editor-note"} -->
+<div class="wp-block-group brc-homepage-editor-note">
+<!-- wp:paragraph -->
+<p><strong>Homepage content is managed below in the BRC Homepage Content sections.</strong></p>
+<!-- /wp:paragraph -->
+<!-- wp:paragraph {"direction":"rtl"} -->
+<p dir="rtl"><strong>محتوى الصفحة الرئيسية يتم تعديله من أقسام محتوى الصفحة الرئيسية الموجودة بالأسفل.</strong></p>
+<!-- /wp:paragraph -->
+</div>
+<!-- /wp:group -->
 HTML,
 	)
 );
@@ -119,8 +126,8 @@ $blog_id = brc_seed_post(
 	array(
 		'post_type'    => 'page',
 		'post_status'  => 'publish',
-		'post_name'    => 'insights',
-		'post_title'   => 'Insights',
+		'post_name'    => 'blog',
+		'post_title'   => 'Blog',
 		'post_content' => '',
 	)
 );

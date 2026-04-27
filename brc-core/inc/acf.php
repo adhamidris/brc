@@ -75,14 +75,117 @@ function brc_core_get_homepage_field_any( array $keys, $default = '', int $post_
 }
 
 /**
- * Default homepage editor content used for onboarding and resilient rendering.
+ * Return the bilingual homepage editing guidance used in admin notices and helper copy.
+ *
+ * @param bool $wrap Whether to wrap the guidance in panel markup.
+ */
+function brc_core_get_homepage_editor_guidance_html( bool $wrap = true ): string {
+	$english = '<strong>' . esc_html__( 'Homepage editing lives in the BRC Homepage Content tabs below. Do not use the standard page content area to build the homepage.', 'brc-core' ) . '</strong>';
+	$arabic  = '<strong dir="rtl" lang="ar">' . esc_html__( 'تعديل الصفحة الرئيسية يتم من خلال تبويبات محتوى الصفحة الرئيسية بالأسفل. فضلاً لا تستخدم مساحة محتوى الصفحة العادية لبناء الصفحة الرئيسية.', 'brc-core' ) . '</strong>';
+	$details = '<p>' . esc_html__( 'Use the tabs for Hero, Metrics, Launches, Projects Selector, Market Notes, About, and Lead Section. Dynamic project and article content is still managed in Projects and Posts.', 'brc-core' ) . '</p>';
+	$details .= '<p dir="rtl" lang="ar">' . esc_html__( 'استخدم التبويبات الخاصة بالهيدر، الإحصائيات، أحدث الإطلاقات، مختار المشاريع، ملاحظات السوق، نبذة عنا، وقسم التواصل. أما محتوى المشاريع والمقالات الديناميكي فيتم تعديله من قسم المشاريع والمقالات.', 'brc-core' ) . '</p>';
+	$content = $english . $details . $arabic;
+
+	if ( ! $wrap ) {
+		return $content;
+	}
+
+	return '<div class="brc-homepage-guidance">' . $content . '</div>';
+}
+
+/**
+ * Default homepage editor content used for onboarding and structured handoff.
  */
 function brc_core_get_default_homepage_content(): string {
 	return <<<HTML
-<!-- wp:shortcode -->[brc_success_metrics]<!-- /wp:shortcode -->
-<!-- wp:shortcode -->[brc_featured_projects]<!-- /wp:shortcode -->
-<!-- wp:shortcode -->[brc_lead_section]<!-- /wp:shortcode -->
+<!-- wp:group {"className":"brc-homepage-editor-note"} -->
+<div class="wp-block-group brc-homepage-editor-note">
+<!-- wp:paragraph -->
+<p><strong>Homepage content is managed below in the BRC Homepage Content sections.</strong></p>
+<!-- /wp:paragraph -->
+<!-- wp:paragraph {"direction":"rtl"} -->
+<p dir="rtl"><strong>محتوى الصفحة الرئيسية يتم تعديله من أقسام محتوى الصفحة الرئيسية الموجودة بالأسفل.</strong></p>
+<!-- /wp:paragraph -->
+</div>
+<!-- /wp:group -->
 HTML;
+}
+
+/**
+ * Check whether the supplied homepage content still uses the old shortcode-based editor body.
+ */
+function brc_core_homepage_content_uses_legacy_shortcodes( string $content ): bool {
+	$legacy_markers = array(
+		'[brc_success_metrics]',
+		'[brc_featured_projects]',
+		'[brc_lead_section]',
+		'"slug":"brc/lead-cta"',
+	);
+
+	foreach ( $legacy_markers as $legacy_marker ) {
+		if ( false !== strpos( $content, $legacy_marker ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Replace old shortcode-heavy homepage editor content with a cleaner internal note.
+ */
+function brc_core_sync_homepage_editor_content( int $post_id ): void {
+	$post = get_post( $post_id );
+
+	if ( ! $post || 'page' !== $post->post_type ) {
+		return;
+	}
+
+	$content = (string) $post->post_content;
+
+	if ( '' !== trim( $content ) && ! brc_core_homepage_content_uses_legacy_shortcodes( $content ) ) {
+		return;
+	}
+
+	wp_update_post(
+		array(
+			'ID'           => $post_id,
+			'post_content' => brc_core_get_default_homepage_content(),
+		)
+	);
+}
+
+/**
+ * Return the currently edited admin post ID when available.
+ */
+function brc_core_get_current_admin_post_id(): int {
+	if ( ! is_admin() ) {
+		return 0;
+	}
+
+	$post_id = isset( $_GET['post'] ) ? absint( wp_unslash( $_GET['post'] ) ) : 0;
+
+	if ( ! $post_id && isset( $_POST['post_ID'] ) ) {
+		$post_id = absint( wp_unslash( $_POST['post_ID'] ) );
+	}
+
+	return $post_id;
+}
+
+/**
+ * Check whether a given post ID is the configured homepage.
+ */
+function brc_core_is_homepage_post( int $post_id ): bool {
+	return $post_id > 0 && (int) get_option( 'page_on_front' ) === $post_id;
+}
+
+/**
+ * Check whether the current admin screen is editing the configured homepage.
+ */
+function brc_core_is_homepage_edit_screen(): bool {
+	$post_id = brc_core_get_current_admin_post_id();
+
+	return brc_core_is_homepage_post( $post_id );
 }
 
 /**
@@ -108,6 +211,15 @@ function brc_core_register_acf_groups(): void {
 			),
 			'style'    => 'seamless',
 			'fields'   => array(
+				array(
+					'key'          => 'field_brc_homepage_guidance',
+					'label'        => __( 'Editing Guidance', 'brc-core' ),
+					'name'         => '',
+					'type'         => 'message',
+					'message'      => brc_core_get_homepage_editor_guidance_html(),
+					'new_lines'    => 'wpautop',
+					'esc_html'     => 0,
+				),
 				array(
 					'key'   => 'field_brc_tab_hero',
 					'label' => __( 'Hero', 'brc-core' ),
@@ -452,6 +564,62 @@ function brc_core_register_acf_groups(): void {
 add_action( 'acf/init', 'brc_core_register_acf_groups' );
 
 /**
+ * Disable the block editor for the front page so the structured ACF tabs stay primary.
+ */
+function brc_core_disable_block_editor_for_homepage( bool $use_block_editor, WP_Post $post ): bool {
+	if ( 'page' === $post->post_type && brc_core_is_homepage_post( (int) $post->ID ) ) {
+		return false;
+	}
+
+	return $use_block_editor;
+}
+add_filter( 'use_block_editor_for_post', 'brc_core_disable_block_editor_for_homepage', 10, 2 );
+
+/**
+ * Print a bilingual admin message on the homepage edit screen.
+ */
+function brc_core_render_homepage_editor_notice( WP_Post $post ): void {
+	if ( ! brc_core_is_homepage_post( (int) $post->ID ) ) {
+		return;
+	}
+
+	printf(
+		'<div class="notice notice-info inline brc-homepage-admin-notice">%s</div>',
+		brc_core_get_homepage_editor_guidance_html( false )
+	);
+}
+add_action( 'edit_form_after_title', 'brc_core_render_homepage_editor_notice' );
+
+/**
+ * Hide the standard page body editor on the homepage edit screen.
+ */
+function brc_core_homepage_admin_css(): void {
+	if ( ! brc_core_is_homepage_edit_screen() ) {
+		return;
+	}
+	?>
+	<style>
+		#postdivrich,
+		.post-type-page #postdivrich {
+			display: none !important;
+		}
+
+		.brc-homepage-guidance,
+		.brc-homepage-admin-notice p {
+			line-height: 1.6;
+		}
+
+		.brc-homepage-guidance p,
+		.brc-homepage-admin-notice p {
+			margin: 0.4em 0;
+		}
+	</style>
+	<?php
+}
+add_action( 'admin_head-post.php', 'brc_core_homepage_admin_css' );
+add_action( 'admin_head-post-new.php', 'brc_core_homepage_admin_css' );
+
+/**
  * Encourage the structured editing stack when it is missing.
  */
 function brc_core_acf_admin_notice(): void {
@@ -462,7 +630,7 @@ function brc_core_acf_admin_notice(): void {
 	if ( ! function_exists( 'acf_add_local_field_group' ) ) {
 		printf(
 			'<div class="notice notice-info"><p>%s</p></div>',
-			esc_html__( 'BRC homepage editing works best with ACF Pro. Without it, the site still renders, but homepage fields and structured onboarding controls are unavailable.', 'brc-core' )
+			esc_html__( 'BRC homepage editing works best with ACF Pro. Without it, the site still renders, but homepage fields and structured onboarding controls are unavailable. يفضل تشغيل ACF Pro حتى تظهر أدوات تعديل الصفحة الرئيسية بشكل كامل.', 'brc-core' )
 		);
 	}
 }
