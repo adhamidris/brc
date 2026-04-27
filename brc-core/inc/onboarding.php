@@ -169,6 +169,31 @@ function brc_core_cleanup_duplicate_posts_by_title( string $post_type, string $t
 }
 
 /**
+ * Keep the requested page title family and trash any extra copies.
+ */
+function brc_core_cleanup_duplicate_pages_by_title( string $title, int $keep_id = 0 ): int {
+	$page_ids = brc_core_get_post_ids_by_title( 'page', $title );
+
+	if ( empty( $page_ids ) ) {
+		return 0;
+	}
+
+	if ( $keep_id && in_array( $keep_id, $page_ids, true ) ) {
+		foreach ( $page_ids as $page_id ) {
+			if ( $page_id === $keep_id ) {
+				continue;
+			}
+
+			wp_trash_post( $page_id );
+		}
+
+		return $keep_id;
+	}
+
+	return brc_core_cleanup_duplicate_posts_by_title( 'page', $title );
+}
+
+/**
  * Find the untouched default Sample Page post.
  */
 function brc_core_get_default_sample_page_id(): int {
@@ -187,6 +212,10 @@ function brc_core_get_default_sample_page_id(): int {
 function brc_core_ensure_page( string $slug, string $title, string $content = '' ): int {
 	$page_ids = brc_core_get_page_ids_by_slug( $slug );
 	$keep_id  = brc_core_get_canonical_page_id( $slug, $page_ids );
+
+	if ( ! $keep_id ) {
+		$keep_id = brc_core_cleanup_duplicate_pages_by_title( $title );
+	}
 
 	if ( $keep_id ) {
 		brc_core_cleanup_duplicate_pages( $slug, $keep_id );
@@ -216,6 +245,8 @@ function brc_core_ensure_page( string $slug, string $title, string $content = ''
 	if ( is_wp_error( $page_id ) ) {
 		return 0;
 	}
+
+	brc_core_cleanup_duplicate_pages_by_title( $title, (int) $page_id );
 
 	return (int) $page_id;
 }
@@ -481,6 +512,56 @@ function brc_core_seed_starter_content(): void {
 }
 
 /**
+ * Determine whether starter posts still need cleanup.
+ */
+function brc_core_starter_content_needs_cleanup(): bool {
+	$starter_post_titles = array(
+		__( 'New Cairo demand brief', 'brc-core' ),
+		__( 'North Coast seasonality and timing', 'brc-core' ),
+	);
+
+	foreach ( $starter_post_titles as $starter_post_title ) {
+		if ( count( brc_core_get_post_ids_by_title( 'post', $starter_post_title ) ) > 1 ) {
+			return true;
+		}
+	}
+
+	$location_titles = array(
+		__( 'New Cairo', 'brc-core' ),
+		__( 'North Coast', 'brc-core' ),
+	);
+
+	foreach ( $location_titles as $location_title ) {
+		if ( count( brc_core_get_post_ids_by_title( 'brc_location', $location_title ) ) > 1 ) {
+			return true;
+		}
+	}
+
+	$project_titles = array(
+		__( 'BRC Heights', 'brc-core' ),
+		__( 'BRC Coast', 'brc-core' ),
+	);
+
+	foreach ( $project_titles as $project_title ) {
+		if ( count( brc_core_get_post_ids_by_title( 'brc_project', $project_title ) ) > 1 ) {
+			return true;
+		}
+	}
+
+	return ! empty(
+		get_posts(
+			array(
+				'post_type'      => 'post',
+				'post_status'    => 'publish',
+				'posts_per_page' => 1,
+				'name'           => 'hello-world',
+				'fields'         => 'ids',
+			)
+		)
+	) || (bool) brc_core_get_default_sample_page_id();
+}
+
+/**
  * Build or repair the primary navigation.
  *
  * @param int $home_id Home page ID.
@@ -606,6 +687,22 @@ function brc_core_onboarding_needs_repair(): bool {
 		return true;
 	}
 
+	if ( count( brc_core_get_post_ids_by_title( 'page', 'Home' ) ) > 1 ) {
+		return true;
+	}
+
+	if ( count( brc_core_get_post_ids_by_title( 'page', 'Blog' ) ) > 1 ) {
+		return true;
+	}
+
+	if ( count( brc_core_get_post_ids_by_title( 'page', 'About' ) ) > 1 ) {
+		return true;
+	}
+
+	if ( count( brc_core_get_post_ids_by_title( 'page', 'Contact' ) ) > 1 ) {
+		return true;
+	}
+
 	if ( (int) get_option( 'page_on_front' ) !== (int) $home_page->ID ) {
 		return true;
 	}
@@ -652,6 +749,10 @@ function brc_core_onboarding_needs_repair(): bool {
 		return true;
 	}
 
+	if ( brc_core_starter_content_needs_cleanup() ) {
+		return true;
+	}
+
 	return false;
 }
 
@@ -672,6 +773,9 @@ function brc_core_run_onboarding( bool $force = false ): void {
 	}
 
 	try {
+		brc_core_cleanup_duplicate_starter_content();
+		brc_core_cleanup_default_hello_world_post();
+
 		$home_id    = brc_core_ensure_page( 'home', __( 'Home', 'brc-core' ), brc_core_get_default_homepage_content() );
 		$blog_id    = brc_core_ensure_page( 'blog', __( 'Blog', 'brc-core' ) );
 		$about_id   = brc_core_ensure_page( 'about', __( 'About', 'brc-core' ), '<!-- wp:paragraph --><p>' . esc_html__( 'Replace this placeholder with BRC brand narrative, leadership, and development philosophy.', 'brc-core' ) . '</p><!-- /wp:paragraph -->' );

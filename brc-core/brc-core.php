@@ -2,7 +2,7 @@
 /**
  * Plugin Name: BRC Core
  * Description: Content types, fields, and schema helpers for BRC Developments.
- * Version: 0.1.2
+ * Version: 0.1.3
  * Requires at least: 6.4
  * Requires PHP: 8.0
  * Author: BRC Developments
@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BRC_CORE_VERSION', '0.1.2' );
+define( 'BRC_CORE_VERSION', '0.1.3' );
 define( 'BRC_CORE_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BRC_CORE_URL', plugin_dir_url( __FILE__ ) );
 
